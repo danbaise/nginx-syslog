@@ -3,6 +3,7 @@ package nginx_syslog
 import (
 	"net"
 	"fmt"
+	"net/url"
 )
 
 type Parser struct {
@@ -30,7 +31,12 @@ func (p *Parser) Handle() {
 			data := recvUDPMsg(NetUDP.Conn)
 			Rfc3164 := NewRfc3164(data)
 			Log := NewLog(Rfc3164.Content)
-			fmt.Printf("%#v\r\n%#v\r\n", Rfc3164, Log)
+			Request := NewRequest(Log.Request)
+			m, err := url.Parse(Request.Path)
+			if err != nil {
+				checkError(err)
+			}
+			fmt.Println(m.Query())
 			c <- struct{}{}
 		}(c)
 		<-c
