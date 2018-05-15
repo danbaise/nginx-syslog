@@ -18,8 +18,12 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
+func NewNetUDP() *NetUDP {
+	return &NetUDP{Conn: recriver()}
+}
+
 func (p *Parser) Handle() {
-	NetUDP := &NetUDP{Conn: recriver()}
+	NetUDP := NewNetUDP()
 	for {
 		c := make(chan struct{}, GONUM)
 		go func(c chan struct{}) {
