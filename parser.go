@@ -6,32 +6,30 @@ import (
 )
 
 type Parser struct {
-	*Rfc3164
-	*Log
-	UDPConn *net.UDPConn
+	/*	*Rfc3164
+		*Log*/
+}
+
+type NetUDP struct {
+	Conn *net.UDPConn
 }
 
 func NewParser() *Parser {
-	return &Parser{UDPConn: recriver()}
+	return &Parser{}
 }
 
 func (p *Parser) Handle() {
+	NetUDP := &NetUDP{Conn: recriver()}
 	for {
 		c := make(chan struct{}, GONUM)
-		for i := 0; i < GONUM; i++ {
-			go func(c chan struct{}) {
-				//		fmt.Println(recvUDPMsg(p.UDPConn))
-				p.Rfc3164 = NewRfc3164(recvUDPMsg(p.UDPConn))
-				p.Log = NewLog(p.Rfc3164.Content)
-				fmt.Printf("%#v\r\n%#v\r\n", p.Rfc3164, p.Log)
-				c <- struct{}{}
-			}(c)
-		}
+		go func(c chan struct{}) {
+			data := recvUDPMsg(NetUDP.Conn)
+			Rfc3164 := NewRfc3164(data)
+			Log := NewLog(Rfc3164.Content)
+			fmt.Printf("%#v\r\n%#v\r\n", Rfc3164, Log)
+			c <- struct{}{}
+		}(c)
 		<-c
 	}
-	defer p.end()
-}
-
-func (p *Parser) end() {
-	p.UDPConn.Close()
+	defer NetUDP.Conn.Close()
 }
