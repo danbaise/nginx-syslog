@@ -4,11 +4,10 @@ import (
 	"net"
 	"fmt"
 	"net/url"
+	"log"
 )
 
 type Parser struct {
-	/*	*Rfc3164
-		*Log*/
 }
 
 type NetUDP struct {
@@ -28,16 +27,24 @@ func (p *Parser) Handle() {
 	for {
 		c := make(chan struct{}, GONUM)
 		go func(c chan struct{}) {
+			defer func() {
+				c <- struct{}{}
+				if err := recover(); err != nil {
+					// 这里可以对异常进行一些处理和捕获
+					log.Print(err)
+				}
+			}()
+
 			data := recvUDPMsg(NetUDP.Conn)
 			Rfc3164 := NewRfc3164(data)
 			Log := NewLog(Rfc3164.Content)
 			Request := NewRequest(Log.Request)
 			m, err := url.Parse(Request.Path)
 			if err != nil {
-				checkError(err)
+				panic(err)
 			}
-			fmt.Println(m.Query())
-			c <- struct{}{}
+			query := m.Query()
+			fmt.Println(query)
 		}(c)
 		<-c
 	}
