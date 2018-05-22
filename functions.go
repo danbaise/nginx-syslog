@@ -61,7 +61,6 @@ func signalHandler(udp *net.UDPConn) {
 					startNewProcess()*/
 		case syscall.SIGINT: //
 			fmt.Println("Ctrl+C信号")
-
 			//file := os.NewFile(3, "")
 			file, _ := udp.File()
 			startNewProcess(file)
