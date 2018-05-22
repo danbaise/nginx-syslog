@@ -23,9 +23,9 @@ func NewNetUDP() *NetUDP {
 }
 
 func (p *Parser) Handle() {
-	signalHandler()
-
 	NetUDP := NewNetUDP()
+	signalHandler(NetUDP.Conn)
+
 	for {
 		c := make(chan struct{}, GONUM)
 		go func(c chan struct{}) {

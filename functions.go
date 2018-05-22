@@ -38,33 +38,48 @@ func recvUDPMsg(conn *net.UDPConn) string {
 	return string(buf[0:n])
 }
 
-func signalHandler() {
+func signalHandler(udp *net.UDPConn) {
 	signalChan := make(chan os.Signal)
 
 	// 监听指定信号
 	signal.Notify(
 		signalChan,
 		//syscall.SIGHUP,	//终端断线
-		syscall.SIGINT, //Ctrl+C信号
-		syscall.SIGTERM,//结束程序(可以被捕获、阻塞或忽略)
+		syscall.SIGINT,  //Ctrl+C信号
+		syscall.SIGTERM, //结束程序(可以被捕获、阻塞或忽略)
 		//syscall.SIGUSR2,//同SIGUSR1，保留给用户使用的信号
 	)
 
 	// 输出当前进程的pid
 	fmt.Println("pid is: ", os.Getpid())
 
-	go func() {
+	go func(udp *net.UDPConn) {
 		// 处理信号
 		switch <-signalChan {
-		/*	case syscall.SIGUSR2: //
-				fmt.Println("USER2信号")*/
+		/*		case syscall.SIGUSR2:
+					fmt.Println("USER2信号")
+					startNewProcess()*/
 		case syscall.SIGINT: //
 			fmt.Println("Ctrl+C信号")
+
+			//file := os.NewFile(3, "")
+			file, _ := udp.File()
+			startNewProcess(file)
+
 		case syscall.SIGTERM:
 			fmt.Println(syscall.SIGTERM)
 		}
-	}()
+	}(udp)
 
 	fmt.Println(os.Args[0])
 
+}
+
+func startNewProcess(file *os.File) {
+	procAttr := &syscall.ProcAttr{
+		Env:   os.Environ(),
+		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd(), file.Fd()},
+	}
+	pid, _, _ := syscall.StartProcess(os.Args[0], os.Args, procAttr)
+	fmt.Printf("start new process ... pid: %d", pid)
 }
