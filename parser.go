@@ -1,30 +1,36 @@
 package nginx_syslog
 
 import (
-	"net"
+	"flag"
 	"fmt"
-	"net/url"
 	"log"
+	"net"
+	"net/url"
+	"syscall"
+	"time"
 )
 
-type Parser struct {
-}
+var Conn *net.UDPConn
+var isChild bool
 
-type NetUDP struct {
-	Conn *net.UDPConn
+type Parser struct {
 }
 
 func NewParser() *Parser {
 	return &Parser{}
 }
 
-func NewNetUDP() *NetUDP {
-	return &NetUDP{Conn: recriver()}
-}
-
 func (p *Parser) Handle() {
-	NetUDP := NewNetUDP()
-	signalHandler(NetUDP.Conn)
+
+	flag.BoolVar(&isChild, "graceful", false, "listen on open fd (after forking)")
+	flag.Parse()
+	if isChild {
+		syscall.Kill(syscall.Getppid(), syscall.SIGTERM) //干掉父进程程序结束(terminate)信号
+		time.Sleep(time.Second * 1)
+	}
+
+	Conn = recriver()
+	go signalHandler()
 
 	for {
 		c := make(chan struct{}, GONUM)
@@ -37,7 +43,7 @@ func (p *Parser) Handle() {
 				}
 			}()
 
-			data := recvUDPMsg(NetUDP.Conn)
+			data := recvUDPMsg(Conn)
 			Rfc3164 := NewRfc3164(data)
 			Log := NewLog(Rfc3164.Content)
 			Request := NewRequest(Log.Request)
@@ -50,5 +56,6 @@ func (p *Parser) Handle() {
 		}(c)
 		<-c
 	}
-	defer NetUDP.Conn.Close()
+
+	defer shutdown()
 }
